@@ -1,0 +1,285 @@
+class User:
+    AC_no = 1020304050
+    def __init__(self, name, email, address, account_type, password):
+        self.name = name
+        self.email = email
+        self.address = address
+        self.account_type = account_type
+        self.balance = 0
+        self.transactions = []
+        self.loan_taken = 0
+        self.password = password
+        self.account_number = User.AC_no
+        User.AC_no += 1 
+
+    def deposit(self, amount):
+        self.balance += amount
+        self.transactions.append(f'Deposit: +${amount}')
+        return f"Deposited ${amount}. Current balance: ${self.balance}"
+
+    def withdraw(self, amount):
+        if amount <= self.balance:
+            self.balance -= amount
+            self.transactions.append(f'Withdraw: -${amount}')
+            return f"Withdrawn ${amount}. Current balance: ${self.balance}"
+        else:
+            if self.balance == 0:
+                return "Bank is bankrupt."
+            else:
+                return "Withdrawal amount exceeded"
+
+    def check_balance(self):
+        return f"Available Balance: ${self.balance}"
+
+    def transaction_history(self):
+        return self.transactions
+
+    def take_loan(self, loan_amount, loan_feature_enabled):
+        if loan_feature_enabled:
+            if self.loan_taken < 2:
+                self.loan_taken += 1
+                self.balance += loan_amount
+                self.transactions.append(f'Loan: +${loan_amount}')
+                return f"Loan of ${loan_amount} added to your account. Current balance: ${self.balance}"
+            else:
+                return "You have already taken a loan twice."
+        else:
+            return "Admin has turned off the loan feature of the bank."
+
+    def transfer(self, target_user, amount):
+        if self.balance < amount:
+            return "Insufficient funds for transfer"
+        else:
+            self.balance -= amount
+            self.transactions.append(f'Transfer to account {target_user.account_number}: -${amount}')
+            target_user.deposit(amount)
+            return f"Transferred ${amount} to account {target_user.account_number}. Current balance: ${self.balance}"
+
+
+class Admin:
+    def __init__(self):
+        self.user_accounts = {}
+        self.total_loan_amount = 0
+        self.loan_feature_enabled = True
+
+    def add_user_account(self, user):
+        self.user_accounts[user.account_number] = user
+
+    def delete_user_account(self, account_number):
+        if account_number in self.user_accounts:
+            del self.user_accounts[account_number]
+            return "User account deleted successfully"
+        else:
+            return "Account does not exist"
+
+    def show_all_user_accounts(self):
+        return list(self.user_accounts.keys())
+
+    def check_total_balance(self):
+      total_balance = 0
+      for user in self.user_accounts.values():
+        total_balance += user.balance
+      return f"Total Available Balance: ${total_balance}"
+
+    def check_total_loan_amount(self):
+      total_loan_amount = 0
+      for user in self.user_accounts.values():
+        for transaction in user.transactions:
+            if 'Loan: +' in transaction:
+                start_extraction = False
+                loan_amount_str = ''
+                for char in transaction:
+                    if start_extraction and char.isdigit():
+                        loan_amount_str += char
+                    elif char == '$':
+                        start_extraction = True
+
+                if loan_amount_str:
+                    total_loan_amount += float(loan_amount_str)
+
+      return f"Total Loan Amount: ${total_loan_amount}"
+
+    def loan_feature(self, enable):
+        self.loan_feature_enabled = enable
+        return f"Loan feature {'enabled' if enable else 'disabled'}."
+
+def create_user_account():
+    print("\nCreate an account")
+
+    name = input("Enter your name: ")
+    email = input("Enter your email: ")
+    address = input("Enter your address: ")
+    while True:
+        account_type = input("Enter account type (Savings/Current): ")
+        if account_type == "Savings" or account_type == "Current":
+            break
+        else:
+            print("Invalid choice. Please enter 'Savings' or 'Current'.")
+
+    password = input("Create a password: ")
+
+    user = User(name, email, address, account_type, password)
+    admin.add_user_account(user)
+    print(f"Account created successfully. Your account number is: {user.account_number}")
+
+    user_menu(user)
+
+
+def display_user_menu():
+    print("\nUser Menu")
+    print("1. Deposit")
+    print("2. Withdraw")
+    print("3. Check Available Balance")
+    print("4. Transaction History")
+    print("5. Take a Loan")
+    print("6. Transfer Money")
+    print("7. Logout")
+
+
+def user_menu(user):
+    while True:
+        display_user_menu()
+        choice = int(input("Enter your choice: "))
+
+        if choice == 1:
+            amount = float(input("Enter the amount to deposit: $"))
+            print(user.deposit(amount))
+
+        elif choice == 2:
+            amount = float(input("Enter the amount to withdraw: $"))
+            print(user.withdraw(amount))
+
+        elif choice == 3:
+            print(user.check_balance())
+
+        elif choice == 4:
+            print("Transaction History:")
+            for transaction in user.transaction_history():
+                print(transaction)
+
+        elif choice == 5:
+            if admin.loan_feature_enabled:
+                if user.loan_taken >= 2:
+                    print("You have already taken a loan twice.")
+                else:
+                    loan_amount = float(input("Enter the loan amount: $"))
+                    print(user.take_loan(loan_amount, admin.loan_feature_enabled))
+            else:
+                print("Loan feature is disabled by the admin.")
+
+        elif choice == 6:
+            target_account = int(input("Enter the target account number: "))
+            if target_account in admin.user_accounts:
+                target_user = admin.user_accounts[target_account]
+                amount = float(input("Enter the amount to transfer: $"))
+                print(user.transfer(target_user, amount))
+            else:
+                print("Account does not exist.")
+
+        elif choice == 7:
+            print("Logged out.")
+            return
+
+        else:
+            print("Invalid choice. Try again.")
+
+
+def login_user():
+    print("\nLogin")
+    account_number = int(input("Enter your account number: "))
+    if account_number in admin.user_accounts:
+        user = admin.user_accounts[account_number]
+        password = input("Enter your password: ")
+        if user.password == password:
+            print("Account logged in successfully.")
+            user_menu(user)
+            return user
+        else:
+            print("Invalid password.")
+            return None
+    else:
+        print("Account does not exist.")
+        return None
+
+
+def admin_menu():
+    while True:
+        print("\nAdmin Menu")
+        print("1. Create User Account")
+        print("2. Delete User Account")
+        print("3. View All User Accounts")
+        print("4. Check Total Available Balance of Bank")
+        print("5. Check Total Loan Amount")
+        print("6. ON/OFF Loan Feature")
+        print("7. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            create_user_account()
+
+        elif choice == '2':
+            account_number = int(input("Enter the account number to delete: "))
+            print(admin.delete_user_account(account_number))
+
+        elif choice == '3':
+            print("All User Accounts:")
+            for account_number in admin.show_all_user_accounts():
+                print(account_number)
+
+        elif choice == '4':
+            print(admin.check_total_balance())
+
+        elif choice == '5':
+            print(admin.check_total_loan_amount())
+
+        elif choice == '6':
+            enable_loan = input("ON/OFF loan feature (On/Off): ")
+            if enable_loan == "On":
+                print(admin.loan_feature(True))
+            elif enable_loan == "Off":
+                print(admin.loan_feature(False))
+
+        elif choice == '7':
+            return
+
+
+admin = Admin()
+
+while True:
+    print("\nWelcome to the Banking Management System")
+    print("1. User")
+    print("2. Admin")
+    print("3. Exit")
+    choice = input("Enter your choice: ")
+
+    if choice == '1':
+        while True:
+            print("\nUser Menu")
+            print("1. Create an account")
+            print("2. Login")
+            print("3. Exit")
+            user_choice = input("Enter your choice: ")
+
+            if user_choice == '1':
+                create_user_account()
+
+            elif user_choice == '2':
+                logged_in_user = login_user()
+                if logged_in_user:
+                    user_menu(logged_in_user)
+
+            elif user_choice == '3':
+                print("Logged out.")
+                break
+
+            else:
+                print("Invalid choice. Try again.")
+
+    elif choice == '2':
+        admin_menu()
+
+    elif choice == '3':
+        break
+
+    else:
+        print("Invalid choice. Try again.")
